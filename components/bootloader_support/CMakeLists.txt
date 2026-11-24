@@ -89,7 +89,9 @@ else()
     set(include_dirs "include" "bootloader_flash/include")
     set(priv_include_dirs "private_include")
     # heap is required for `heap_memory_layout.h` header
-    set(priv_requires spi_flash mbedtls efuse heap esp_bootloader_format esp_app_format)
+    # mbedtls is optional: without it in the build, the application supplies
+    # bootloader_sha256_start/data/finish (see bootloader_sha.c).
+    set(priv_requires spi_flash efuse heap esp_bootloader_format esp_app_format)
 endif()
 
 if(BOOTLOADER_BUILD)
@@ -142,6 +144,20 @@ idf_component_register(SRCS "${srcs}"
                     PRIV_INCLUDE_DIRS "${priv_include_dirs}"
                     REQUIRES "${requires}"
                     PRIV_REQUIRES "${priv_requires}")
+
+if(NOT BOOTLOADER_BUILD AND NOT CONFIG_APP_BUILD_TYPE_RAM)
+    # The application-side image hash uses mbedtls when the build contains it.
+    # Otherwise the application provides bootloader_sha256_start/data/finish.
+    idf_build_get_property(build_components BUILD_COMPONENTS)
+    if(mbedtls IN_LIST build_components)
+        idf_component_optional_requires(PRIVATE mbedtls)
+    else()
+        if(CONFIG_SECURE_SIGNED_ON_UPDATE)
+            message(FATAL_ERROR "bootloader_support: signed application updates need the mbedtls component")
+        endif()
+        target_compile_definitions(${COMPONENT_LIB} PRIVATE BOOTLOADER_SHA_APP_EXTERNAL=1)
+    endif()
+endif()
 
 if(NOT BOOTLOADER_BUILD)
     if(CONFIG_SECURE_SIGNED_ON_UPDATE)

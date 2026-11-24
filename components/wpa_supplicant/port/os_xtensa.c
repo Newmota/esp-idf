@@ -28,7 +28,9 @@
 #include <sys/time.h>
 #include "esp_random.h"
 #include "utils/common.h"
+#ifdef CONFIG_CRYPTO_MBEDTLS
 #include "mbedtls/platform_util.h"
+#endif
 
 int os_get_time(struct os_time *t)
 {
