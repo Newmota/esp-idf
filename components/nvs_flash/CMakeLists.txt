@@ -83,10 +83,20 @@ else()
         target_compile_options(${COMPONENT_LIB} PUBLIC --coverage)
         target_link_libraries(${COMPONENT_LIB} PUBLIC --coverage)
     else()
-        target_sources(${COMPONENT_LIB} PRIVATE "src/nvs_encrypted_partition.cpp"
-                                                "src/nvs_bootloader_aes.c"
-                                                "src/nvs_bootloader_xts_aes.c")
-        target_link_libraries(${COMPONENT_LIB} PRIVATE idf::mbedtls)
+        # NVS encryption is implemented with mbedtls AES-XTS. Without the mbedtls
+        # component in the build, the secure-init APIs report ESP_ERR_NOT_SUPPORTED.
+        idf_build_get_property(build_components BUILD_COMPONENTS)
+        if(mbedtls IN_LIST build_components)
+            target_sources(${COMPONENT_LIB} PRIVATE "src/nvs_encrypted_partition.cpp"
+                                                    "src/nvs_bootloader_aes.c"
+                                                    "src/nvs_bootloader_xts_aes.c")
+            target_link_libraries(${COMPONENT_LIB} PRIVATE idf::mbedtls)
+        else()
+            if(CONFIG_NVS_ENCRYPTION)
+                message(FATAL_ERROR "nvs_flash: CONFIG_NVS_ENCRYPTION needs the mbedtls component")
+            endif()
+            target_compile_definitions(${COMPONENT_LIB} PRIVATE NVS_ENCRYPTION_UNAVAILABLE=1)
+        endif()
     endif()
 
     if(CONFIG_COMPILER_STATIC_ANALYZER AND CMAKE_C_COMPILER_ID STREQUAL "GNU") # TODO IDF-10088

@@ -3289,6 +3289,8 @@ struct wpabuf *owe_build_assoc_req(struct wpa_sm *sm, u16 group)
         return NULL;
     }
 
+    /* A repeated association request would otherwise leak the previous context. */
+    crypto_ecdh_deinit(sm->owe_ecdh);
     sm->owe_ecdh = crypto_ecdh_init(group);
 
     if (!sm->owe_ecdh) {
@@ -3333,6 +3335,8 @@ struct wpabuf *owe_build_assoc_req(struct wpa_sm *sm, u16 group)
 fail:
     wpabuf_free(pub);
     crypto_ecdh_deinit(sm->owe_ecdh);
+    /* owe_deinit() frees it again otherwise. */
+    sm->owe_ecdh = NULL;
     return NULL;
 }
 

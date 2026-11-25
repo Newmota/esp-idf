@@ -8,9 +8,9 @@
 #include "nvs_partition_lookup.hpp"
 #include "nvs_internal.h"
 
-#ifndef LINUX_TARGET
+#if !defined(LINUX_TARGET) && !NVS_ENCRYPTION_UNAVAILABLE
 #include "nvs_encrypted_partition.hpp"
-#endif // ! LINUX_TARGET
+#endif // ! LINUX_TARGET && ! NVS_ENCRYPTION_UNAVAILABLE
 
 using namespace std;
 

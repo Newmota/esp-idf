@@ -29,11 +29,19 @@ ESP_STATIC_ASSERT(sizeof(nvs_bootloader_single_entry_t) == NVS_CONST_ENTRY_SIZE,
 #define NVS_KEY_SIZE 32 // AES-256
 
 /* Currently we support only single-threaded use-cases of reading encrypted NVS partitions */
+#if !NVS_ENCRYPTION_UNAVAILABLE
 static nvs_bootloader_xts_aes_context dec_ctx;
+#endif
 static bool is_nvs_partition_encrypted = false;
 
 static esp_err_t decrpyt_data(uint32_t src_offset, void* dst, size_t size)
 {
+#if NVS_ENCRYPTION_UNAVAILABLE
+    (void)src_offset;
+    (void)dst;
+    (void)size;
+    return ESP_ERR_NOT_SUPPORTED;
+#else
     // decrypt data
     // sector num, could have been just uint64/32.
     uint8_t data_unit[16];
@@ -44,6 +52,7 @@ static esp_err_t decrpyt_data(uint32_t src_offset, void* dst, size_t size)
     memcpy(data_unit, &relAddr, sizeof(relAddr));
 
     return nvs_bootloader_aes_crypt_xts(&dec_ctx, AES_DEC, size, data_unit, destination, destination);
+#endif
 }
 
 static esp_err_t nvs_bootloader_partition_read_string_value(const esp_partition_t *partition, size_t src_offset, void *block, size_t block_len)
@@ -708,6 +717,10 @@ esp_err_t nvs_bootloader_read(const char* partition_name,
 
 esp_err_t nvs_bootloader_secure_init(const nvs_sec_cfg_t *sec_cfg)
 {
+#if NVS_ENCRYPTION_UNAVAILABLE
+    (void)sec_cfg;
+    return ESP_ERR_NOT_SUPPORTED;
+#else
 #if CONFIG_MBEDTLS_USE_CRYPTO_ROM_IMPL_BOOTLOADER && BOOTLOADER_BUILD
     // To enable usage of mbedtls APIs form the ROM, we need to initialize the rom mbedtls functions table pointer.
     // In case of application, a constructor present in the mbedtls component initializes the rom mbedtls functions table pointer during boot up.
@@ -723,14 +736,17 @@ esp_err_t nvs_bootloader_secure_init(const nvs_sec_cfg_t *sec_cfg)
 
     is_nvs_partition_encrypted = true;
     return ret;
+#endif /* NVS_ENCRYPTION_UNAVAILABLE */
 }
 
 void nvs_bootloader_secure_deinit(void)
 {
+#if !NVS_ENCRYPTION_UNAVAILABLE
     if (is_nvs_partition_encrypted) {
         nvs_bootloader_xts_aes_free(&dec_ctx);
         is_nvs_partition_encrypted = false;
     }
+#endif
 }
 
 esp_err_t nvs_bootloader_read_security_cfg(nvs_sec_scheme_t *scheme_cfg, nvs_sec_cfg_t* cfg)

@@ -11,9 +11,6 @@
 #include <sys/random.h>
 #include <esp_log.h>
 #include <esp_err.h>
-#include <psa/crypto.h>
-#include <mbedtls/base64.h>
-#include <mbedtls/error.h>
 
 #include <esp_http_server.h>
 #include "esp_httpd_priv.h"
@@ -21,6 +18,11 @@
 #include "sdkconfig.h"
 
 #ifdef CONFIG_HTTPD_WS_SUPPORT
+
+#include <psa/crypto.h>
+#include <mbedtls/sha1.h>
+#include <mbedtls/base64.h>
+#include <mbedtls/error.h>
 
 #define WS_SEND_OK      (1 << 0)
 #define WS_SEND_FAILED  (1 << 1)

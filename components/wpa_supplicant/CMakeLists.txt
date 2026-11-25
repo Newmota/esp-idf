@@ -184,6 +184,17 @@ else()
     "src/crypto/sha384-internal.c"
     "src/crypto/sha512-internal.c"
     "src/crypto/sha256.c")
+    if(CONFIG_ESP_WIFI_EXTERNAL_CRYPTO)
+        # The application also provides md5_vector, sha1_vector, sha256_vector and the
+        # aes_encrypt_*/aes_decrypt_* block functions.
+        list(REMOVE_ITEM crypto_src
+            "src/crypto/aes-internal-dec.c"
+            "src/crypto/aes-internal-enc.c"
+            "src/crypto/aes-internal.c"
+            "src/crypto/md5-internal.c"
+            "src/crypto/sha1-internal.c"
+            "src/crypto/sha256-internal.c")
+    endif()
 endif()
 
 if(CONFIG_ESP_WIFI_11KV_SUPPORT OR CONFIG_ESP_WIFI_11R_SUPPORT)
@@ -277,7 +288,16 @@ idf_component_register(SRCS "${srcs}" "${esp_srcs}" "${tls_src}" "${roaming_src}
                                       ../esp_wifi/wifi_apps/include/apps_private
                                       esp_supplicant/include/esp_private
                     LDFRAGMENTS   ${linker_fragments}
-                    PRIV_REQUIRES mbedtls esp_timer esp_wifi)
+                    PRIV_REQUIRES esp_timer esp_wifi)
+
+# mbedtls is optional: the internal crypto backend (CONFIG_ESP_WIFI_MBEDTLS_CRYPTO=n
+# without an mbedtls TLS client) builds without it.
+idf_build_get_property(build_components BUILD_COMPONENTS)
+if(mbedtls IN_LIST build_components)
+    idf_component_optional_requires(PRIVATE mbedtls)
+elseif(CONFIG_ESP_WIFI_MBEDTLS_CRYPTO OR CONFIG_ESP_WIFI_MBEDTLS_TLS_CLIENT)
+    message(FATAL_ERROR "wpa_supplicant: the mbedtls crypto backend or TLS client needs the mbedtls component")
+endif()
 
 target_compile_definitions(${COMPONENT_LIB} PRIVATE
     __ets__
@@ -297,7 +317,7 @@ target_compile_definitions(${COMPONENT_LIB} PRIVATE
     CONFIG_NO_RADIUS
     )
 
-if(CONFIG_MBEDTLS_HARDWARE_SHA)
+if(CONFIG_MBEDTLS_HARDWARE_SHA AND CONFIG_ESP_WIFI_MBEDTLS_CRYPTO)
     if(NOT CONFIG_SOC_SHA_SUPPORT_PARALLEL_ENG)
         target_compile_definitions(${COMPONENT_LIB} PRIVATE CONFIG_FAST_PSK)
     else()
@@ -370,7 +390,8 @@ endif()
 if(CONFIG_ESP_WIFI_MBEDTLS_CRYPTO)
     target_compile_definitions(${COMPONENT_LIB} PRIVATE CONFIG_CRYPTO_MBEDTLS)
 endif()
-if(NOT CONFIG_MBEDTLS_SHA1_C AND NOT CONFIG_MBEDTLS_HARDWARE_SHA)
+# The internal crypto list always carries its own SHA-1 (sha1-internal.c).
+if(NOT CONFIG_ESP_WIFI_MBEDTLS_CRYPTO OR (NOT CONFIG_MBEDTLS_SHA1_C AND NOT CONFIG_MBEDTLS_HARDWARE_SHA))
     target_compile_definitions(${COMPONENT_LIB} PRIVATE CONFIG_CRYPTO_INTERNAL)
 endif()
 if(CONFIG_ESP_WIFI_WPS_SOFTAP_REGISTRAR)

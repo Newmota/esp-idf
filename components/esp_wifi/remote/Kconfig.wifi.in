@@ -279,7 +279,7 @@ config WIFI_RMT_RX_IRAM_OPT
 config WIFI_RMT_ENABLE_WPA3_SAE
     bool "Enable WPA3-Personal"
     default y
-    select WIFI_RMT_MBEDTLS_CRYPTO
+    select WIFI_RMT_MBEDTLS_CRYPTO if !ESP_WIFI_EXTERNAL_CRYPTO
     help
         Select this option to allow the device to establish a WPA3-Personal connection with eligible AP's.
         PMF (Protected Management Frames) is a prerequisite feature for a WPA3 connection, it needs to be
@@ -311,7 +311,7 @@ config WIFI_RMT_SOFTAP_SAE_SUPPORT
 config WIFI_RMT_ENABLE_WPA3_OWE_STA
     bool "Enable OWE STA"
     default y
-    select WIFI_RMT_MBEDTLS_CRYPTO
+    select WIFI_RMT_MBEDTLS_CRYPTO if !ESP_WIFI_EXTERNAL_CRYPTO
     help
         Select this option to allow the device to establish OWE connection with eligible AP's.
         PMF (Protected Management Frames) is a prerequisite feature for a WPA3 connection, it needs to be
@@ -330,6 +330,7 @@ config WIFI_RMT_ENABLE_WPA3_OWE_SOFTAP
     default y
     select WIFI_RMT_MBEDTLS_CRYPTO
     depends on WIFI_RMT_SOFTAP_SUPPORT
+    depends on !ESP_WIFI_EXTERNAL_CRYPTO
     help
         Select this option to allow the device to enable OWE Only mode for softap.
 

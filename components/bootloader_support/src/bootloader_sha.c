@@ -176,6 +176,11 @@ void bootloader_sha256_finish(bootloader_sha256_handle_t handle, uint8_t *digest
     asm volatile ("memw");
 }
 #endif /* CONFIG_IDF_TARGET_ESP32 */
+#elif BOOTLOADER_SHA_APP_EXTERNAL
+/* The build contains no mbedtls component: the application defines
+ * bootloader_sha256_start(), bootloader_sha256_data() and bootloader_sha256_finish()
+ * with the contract of the mbedtls variant below (reentrant handles; finish with a NULL
+ * digest releases the handle). */
 #else /* NON_OS_BUILD || CONFIG_APP_BUILD_TYPE_RAM */
 
 #include "bootloader_flash_priv.h"

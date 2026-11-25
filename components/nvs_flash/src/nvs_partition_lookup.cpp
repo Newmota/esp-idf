@@ -6,9 +6,9 @@
 #include "nvs_partition_lookup.hpp"     // For partition_lookup namespace
 
 #include "esp_partition.h"          // For esp_partition_t
-#ifndef LINUX_TARGET
+#if !defined(LINUX_TARGET) && !NVS_ENCRYPTION_UNAVAILABLE
 #include "nvs_encrypted_partition.hpp"
-#endif // ! LINUX_TARGET
+#endif // ! LINUX_TARGET && ! NVS_ENCRYPTION_UNAVAILABLE
 
 namespace nvs {
 namespace partition_lookup {
@@ -59,7 +59,13 @@ esp_err_t lookup_nvs_partition(const char* label, Partition **p)
 #ifndef LINUX_TARGET
 esp_err_t lookup_nvs_encrypted_partition(const char* label, nvs_sec_cfg_t* cfg, Partition **p)
 {
-#ifndef CONFIG_NVS_BDL_STACK
+#if NVS_ENCRYPTION_UNAVAILABLE
+    // Built without the mbedtls component, which implements the XTS-AES layer.
+    (void)label;
+    (void)cfg;
+    (void)p;
+    return ESP_ERR_NOT_SUPPORTED;
+#elif !defined(CONFIG_NVS_BDL_STACK)
     const esp_partition_t* esp_partition = esp_partition_find_first(
         ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_NVS, label);
 
